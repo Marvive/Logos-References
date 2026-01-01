@@ -74,11 +74,23 @@ export default class LogosReferencePlugin extends Plugin {
 				// Determine callout title based on settings
 				const calloutTitle = this.settings.customCalloutTitle || 'Logos Ref';
 
-				const quotedText = [
+				const quotedTextParts = [
 					`> [!${calloutTitle}]`,
-					`> ${mainText.split('\n').join('\n> ')}`,
-					`> [[${filePath}|${citeKey}${pageLabel}]] ^${blockId}`
-				].join('\n');
+					`> ${mainText.split('\n').join('\n> ')}`
+				];
+
+				if (this.settings.addNewLineBeforeLink) {
+					quotedTextParts.push(`> `);
+				}
+
+				// Use descriptive note name as alias if enabled, otherwise use citeKey
+				const linkAlias = this.settings.appendReferencesToTitle
+					? `${noteName}${pageLabel}`
+					: `${citeKey}${pageLabel}`;
+
+				quotedTextParts.push(`> [[${filePath}|${linkAlias}]] ^${blockId}`);
+
+				const quotedText = quotedTextParts.join('\n');
 
 				editor.replaceSelection(`${quotedText}\n`);
 
