@@ -4,8 +4,8 @@
 	"version": "1.0.6",
 	"minAppVersion": "0.15.0",
 	"description": "Easily take refs from Logos and connect them within your notes",
-	"author": "Joey Kilgore",
-	"authorUrl": "https://github.com/joey-kilgore",
-	"fundingUrl": "https://github.com/sponsors/joey-kilgore",
+	"author": "Michael Marvive",
+	"authorUrl": "https://github.com/michaelmarvive",
+	"fundingUrl": "https://github.com/sponsors/michaelmarvive",
 	"isDesktopOnly": false
 }
