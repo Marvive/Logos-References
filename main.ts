@@ -75,7 +75,7 @@ export default class LogosReferencePlugin extends Plugin {
 				const calloutTitle = this.settings.customCalloutTitle || 'Logos Ref';
 
 				const quotedTextParts = [
-					`> [!${calloutTitle}]`,
+					`> [!logos-ref]|church ${calloutTitle}`,
 					`> ${mainText.split('\n').join('\n> ')}`
 				];
 
