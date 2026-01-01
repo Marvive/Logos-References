@@ -8,6 +8,9 @@ interface LogosPluginSettings {
 	appendReferencesToTitle: boolean;
 	addNewLineBeforeLink: boolean;
 	autoDetectBibleVerses: boolean;
+	bibleTranslation: string;
+	useCustomMetadata: boolean;
+	customMetadataTags: string[];
 }
 
 const DEFAULT_SETTINGS: LogosPluginSettings = {
@@ -17,6 +20,9 @@ const DEFAULT_SETTINGS: LogosPluginSettings = {
 	appendReferencesToTitle: false,
 	addNewLineBeforeLink: false,
 	autoDetectBibleVerses: false,
+	bibleTranslation: 'esv',
+	useCustomMetadata: false,
+	customMetadataTags: [],
 };
 
 export default class LogosReferencePlugin extends Plugin {
@@ -54,7 +60,7 @@ export default class LogosReferencePlugin extends Plugin {
 
 				// Auto-detect Bible verses and link them to Logos if enabled
 				if (this.settings.autoDetectBibleVerses) {
-					mainText = linkBibleVerses(mainText);
+					mainText = linkBibleVerses(mainText, this.settings.bibleTranslation);
 				}
 
 				const pageLabel = page
@@ -108,7 +114,17 @@ export default class LogosReferencePlugin extends Plugin {
 					}
 					// Build content with optional newline before citation
 					const citationPrefix = this.settings.addNewLineBeforeLink ? '\n' : '';
-					const content = [
+
+					let metadata = '';
+					if (this.settings.useCustomMetadata && this.settings.customMetadataTags.length > 0) {
+						metadata = '---\ntags:\n';
+						this.settings.customMetadataTags.forEach(tag => {
+							metadata += `  - ${tag}\n`;
+						});
+						metadata += '---\n\n';
+					}
+
+					const content = metadata + [
 						'```bibtex',
 						bibtex.replace(/pages\s*=\s*{[^}]*},?\s*/gi, ""),  // optionally remove page field
 						'```',
@@ -465,14 +481,100 @@ class LogosPluginSettingTab extends PluginSettingTab {
 
 		new Setting(this.containerEl)
 			.setName("Auto-detect Bible verses")
-			.setDesc("Automatically detects Bible verse references (e.g., \"John 3:16\", \"Gen 1:1\") and links them to Logos (ESV)")
+			.setDesc("Automatically detects Bible verse references (e.g., \"John 3:16\", \"Gen 1:1\") and links them to Logos")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.autoDetectBibleVerses)
 					.onChange(async (value) => {
 						this.plugin.settings.autoDetectBibleVerses = value;
 						await this.plugin.saveSettings();
+						this.display(); // Refresh to show/hide translation dropdown
 					})
 			);
+
+		if (this.plugin.settings.autoDetectBibleVerses) {
+			new Setting(this.containerEl)
+				.setName("Preferred Bible translation")
+				.setDesc("The translation to use for Logos ref.ly links")
+				.addDropdown((dropdown) =>
+					dropdown
+						.addOptions({
+							niv: "NIV",
+							esv: "ESV",
+							nasb: "NASB",
+							lsb: "LSB",
+							nlt: "NLT",
+						})
+						.setValue(this.plugin.settings.bibleTranslation)
+						.onChange(async (value) => {
+							this.plugin.settings.bibleTranslation = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		new Setting(this.containerEl)
+			.setName("Use custom metadata")
+			.setDesc("Add custom metadata tags to the top of new notes")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.useCustomMetadata)
+					.onChange(async (value) => {
+						this.plugin.settings.useCustomMetadata = value;
+						await this.plugin.saveSettings();
+						this.display(); // Refresh to show/hide tag list
+					})
+			);
+
+		if (this.plugin.settings.useCustomMetadata) {
+			new Setting(this.containerEl)
+				.setName("Add metadata tag")
+				.setDesc("Enter a tag name to add it to the list")
+				.addText((text) => {
+					text.setPlaceholder("Example: sermon")
+						.setDisabled(false);
+
+					const inputEl = text.inputEl;
+					inputEl.onkeypress = async (e: KeyboardEvent) => {
+						if (e.key === 'Enter' && inputEl.value.trim()) {
+							const newTag = inputEl.value.trim().replace(/^#/, '');
+							if (!this.plugin.settings.customMetadataTags.contains(newTag)) {
+								this.plugin.settings.customMetadataTags.push(newTag);
+								await this.plugin.saveSettings();
+								this.display();
+							}
+						}
+					};
+				})
+				.addButton((button) => {
+					button.setButtonText("Add")
+						.setCta()
+						.onClick(async () => {
+							const inputEl = (this.containerEl.querySelector(".setting-item:last-child input") as HTMLInputElement);
+							if (inputEl && inputEl.value.trim()) {
+								const newTag = inputEl.value.trim().replace(/^#/, '');
+								if (!this.plugin.settings.customMetadataTags.contains(newTag)) {
+									this.plugin.settings.customMetadataTags.push(newTag);
+									await this.plugin.saveSettings();
+									this.display();
+								}
+							}
+						});
+				});
+
+			this.plugin.settings.customMetadataTags.forEach((tag, index) => {
+				new Setting(this.containerEl)
+					.setName(tag)
+					.addButton((button) => {
+						button.setButtonText("Remove")
+							.setWarning()
+							.onClick(async () => {
+								this.plugin.settings.customMetadataTags.splice(index, 1);
+								await this.plugin.saveSettings();
+								this.display();
+							});
+					});
+			});
+		}
 	}
 }
