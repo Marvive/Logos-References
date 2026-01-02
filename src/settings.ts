@@ -114,7 +114,7 @@ export class LogosPluginSettingTab extends PluginSettingTab {
 
         new Setting(this.containerEl)
             .setName("Use custom metadata")
-            .setDesc("Add custom metadata categories to the top of new notes")
+            .setDesc("Add custom metadata categories to the top of new book notes")
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.useCustomMetadata)
@@ -162,17 +162,44 @@ export class LogosPluginSettingTab extends PluginSettingTab {
                 });
 
             this.plugin.settings.customMetadataFields.forEach((field, index) => {
-                new Setting(this.containerEl)
-                    .setName(field)
-                    .addButton((button) => {
-                        button.setButtonText("Remove")
-                            .setWarning()
+                const setting = new Setting(this.containerEl)
+                    .setName(field);
+
+                if (index > 0) {
+                    setting.addButton((button) => {
+                        button.setIcon("arrow-up")
+                            .setTooltip("Move up")
                             .onClick(async () => {
-                                this.plugin.settings.customMetadataFields.splice(index, 1);
+                                const fields = this.plugin.settings.customMetadataFields;
+                                [fields[index], fields[index - 1]] = [fields[index - 1], fields[index]];
                                 await this.plugin.saveSettings();
                                 this.display();
                             });
                     });
+                }
+
+                if (index < this.plugin.settings.customMetadataFields.length - 1) {
+                    setting.addButton((button) => {
+                        button.setIcon("arrow-down")
+                            .setTooltip("Move down")
+                            .onClick(async () => {
+                                const fields = this.plugin.settings.customMetadataFields;
+                                [fields[index], fields[index + 1]] = [fields[index + 1], fields[index]];
+                                await this.plugin.saveSettings();
+                                this.display();
+                            });
+                    });
+                }
+
+                setting.addButton((button) => {
+                    button.setButtonText("Remove")
+                        .setWarning()
+                        .onClick(async () => {
+                            this.plugin.settings.customMetadataFields.splice(index, 1);
+                            await this.plugin.saveSettings();
+                            this.display();
+                        });
+                });
             });
         }
 
