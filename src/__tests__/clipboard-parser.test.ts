@@ -3,7 +3,8 @@ import {
     extractCiteKey,
     extractPageNumber,
     extractPagesFromBibtex,
-    extractBookTitle
+    extractBookTitle,
+    cleanFormattedText
 } from '../utils/clipboard-parser';
 
 describe('Clipboard Parser', () => {
@@ -45,6 +46,33 @@ Third line.
 
             expect(result.mainText).toContain('First line');
             expect(result.mainText).toContain('Third line');
+        });
+
+        it('should handle clipboard with Markdown formatting (italics and bold)', () => {
+            const clipboard = `This is a *quote* with **bold** text.
+@book{smith2020,
+  author = {John Smith},
+  title = {Systematic Theology},
+  pages = {123},
+}`;
+            const result = parseLogosClipboard(clipboard);
+
+            expect(result.mainText).toBe('This is a *quote* with **bold** text.');
+            expect(result.bibtex).toContain('@book{smith2020');
+        });
+
+        it('should handle clipboard that is only a BibTeX entry', () => {
+            const clipboard = `@book{citation2023, title={Only Citation}}`;
+            const result = parseLogosClipboard(clipboard);
+            expect(result.mainText).toBe("");
+            expect(result.bibtex).toContain("@book{citation2023");
+        });
+
+        it('should handle clipboard with space instead of newline before @', () => {
+            const clipboard = `Text result @book{citation2023, title={Only Citation}}`;
+            const result = parseLogosClipboard(clipboard);
+            expect(result.mainText).toBe("Text result");
+            expect(result.bibtex).toContain("@book{citation2023");
         });
     });
 
@@ -116,6 +144,28 @@ Third line.
         it('should return null when no title field', () => {
             const bibtex = '@misc{test, author = {Someone}}';
             expect(extractBookTitle(bibtex)).toBeNull();
+        });
+    });
+
+    describe('cleanFormattedText', () => {
+        it('should convert single underscores to asterisks', () => {
+            const input = 'This is _italic_ text.';
+            expect(cleanFormattedText(input)).toBe('This is *italic* text.');
+        });
+
+        it('should convert double underscores to superscripts', () => {
+            const input = 'This is __bold__ text.';
+            expect(cleanFormattedText(input)).toBe('This is <sup>bold</sup> text.');
+        });
+
+        it('should convert double asterisks to superscripts', () => {
+            const input = 'This is **bold** text.';
+            expect(cleanFormattedText(input)).toBe('This is <sup>bold</sup> text.');
+        });
+
+        it('should handle multiple formats in one string', () => {
+            const input = 'The _quick_ brown fox __jumps__ over the **lazy** dog.';
+            expect(cleanFormattedText(input)).toBe('The *quick* brown fox <sup>jumps</sup> over the <sup>lazy</sup> dog.');
         });
     });
 });

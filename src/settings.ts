@@ -230,6 +230,18 @@ export class LogosPluginSettingTab extends PluginSettingTab {
         }
 
         new Setting(this.containerEl)
+            .setName("Retain formatting")
+            .setDesc("When enabled, italics, bold, and superscript formatting from logos will be preserved")
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.retainFormatting)
+                    .onChange(async (value) => {
+                        this.plugin.settings.retainFormatting = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(this.containerEl)
             .setName("Show ribbon icon")
             .setDesc("Toggle the church icon in the Obsidian ribbon for one-click pasting")
             .addToggle((toggle) =>
